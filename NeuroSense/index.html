@@ -209,7 +209,7 @@
 // ------------------------------------------------------------------
 const DB_URL = "https://neurosense-ca40a-default-rtdb.firebaseio.com/feet.json";
 const REFRESH_MS = 3000;
-const STALE_MS = 15000;           // no new upload for 15 s -> foot is offline
+const STALE_MS = 60000;           // no new upload for 60 s -> foot is offline
 const TEMP_LIMIT = 2.2;
 const FORCE_DEMO = new URLSearchParams(location.search).has("demo");
 
@@ -230,7 +230,7 @@ const T = {
       temp:"الحرارة",hum:"الرطوبة",bat:"البطارية",motion:"الحركة",moving:"يتحرك",still:"ثابت",
       lgMain:"حساس أساسي",lgFlex:"نقطة الطبقة المرنة",
       rP:"ضغط مستمر",rF:"نقطة ضغط موضعية",rT:"فرق حرارة",rH:"رطوبة عالية (تجريبي)",
-      whyNone:"لا يوجد تنبيه",whyOff:"لم تصل بيانات من هذه القدم خلال 15 ثانية",
+      whyNone:"لا يوجد تنبيه",whyOff:"لم تصل بيانات من هذه القدم خلال دقيقة",
       wP_MEDIUM:"ضغط مستمر متوسط",wP_HIGH:"ضغط مستمر عالي",wF_ALERT:"نقطة ضغط موضعية",wF_DANGER:"نقطة ضغط موضعية عالية",wT:"فرق حرارة بين القدمين",wH:"رطوبة عالية",
       tNoteOk:"الفرق ضمن الطبيعي",tNoteBad:"الفرق أعلى من 2.2°م",tNoteNA:"تحتاج القدمين متصلتين للمقارنة",
       logChanged:"تغيّرت الحالة إلى",
@@ -253,7 +253,7 @@ const T = {
       temp:"Temperature",hum:"Humidity",bat:"Battery",motion:"Motion",moving:"Moving",still:"Still",
       lgMain:"Main sensor",lgFlex:"Flexible layer point",
       rP:"Sustained pressure",rF:"Localized pressure point",rT:"Temperature difference",rH:"High humidity (experimental)",
-      whyNone:"No alerts",whyOff:"No data from this foot in the last 15 s",
+      whyNone:"No alerts",whyOff:"No data from this foot in the last minute",
       wP_MEDIUM:"Medium sustained pressure",wP_HIGH:"High sustained pressure",wF_ALERT:"Localized pressure point",wF_DANGER:"High localized pressure point",wT:"Temperature difference between feet",wH:"High humidity",
       tNoteOk:"Difference within normal",tNoteBad:"Difference above 2.2 °C",tNoteNA:"Both feet must be online to compare",
       logChanged:"status changed to",
