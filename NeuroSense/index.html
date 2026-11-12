@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroSense | لوحة متابعة القدمين</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f6f9; --card:#ffffff; --ink:#0f2433; --muted:#5d7180; --line:#e1e8ee;
+    --brand:#0b6e79; --brand-soft:#e3f3f4;
+    --ok:#1f9d6b; --ok-soft:#e5f6ee;
+    --warn:#d98a00; --warn-soft:#fff3dc;
+    --bad:#d23a3a; --bad-soft:#fde8e8;
+    --idle:#9aa9b4; --idle-soft:#eef2f5;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:15px;line-height:1.55}
+  .wrap{max-width:1240px;margin:0 auto;padding:24px 20px 40px}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:12px;background:var(--brand);display:grid;place-items:center}
+  .brand h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
+  .brand p{margin:0;color:var(--muted);font-size:13px}
+  .hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;background:var(--card);border:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+  .pill.live .dot{background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft)}
+  .pill.demo .dot{background:var(--warn);box-shadow:0 0 0 4px var(--warn-soft)}
+  .pill.off .dot{background:var(--bad)}
+  .btn{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  .btn:hover{border-color:var(--brand);color:var(--brand)}
+
+  /* layout */
+  .grid-top{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-bottom:18px}
+  .grid-feet{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  @media (max-width:900px){.grid-top,.grid-feet{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:0 1px 2px rgba(15,36,51,.04)}
+  .card h2{margin:0 0 4px;font-size:16px;font-weight:700}
+  .card .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+
+  /* overall */
+  .overall{display:flex;gap:16px;align-items:stretch}
+  .ov-box{flex:1;border-radius:14px;padding:16px;background:var(--idle-soft)}
+  .ov-box .lbl{font-size:13px;color:var(--muted);font-weight:600}
+  .ov-box .val{font-size:26px;font-weight:700;margin-top:4px}
+  .ov-box .why{font-size:13px;margin-top:6px;color:var(--ink);min-height:40px}
+  .st-NORMAL{background:var(--ok-soft)} .st-NORMAL .val{color:var(--ok)}
+  .st-WARNING{background:var(--warn-soft)} .st-WARNING .val{color:var(--warn)}
+  .st-DANGER{background:var(--bad-soft)} .st-DANGER .val{color:var(--bad)}
+  .st-OFFLINE{background:var(--idle-soft)} .st-OFFLINE .val{color:var(--idle)}
+
+  /* temperature compare */
+  .tc{direction:rtl;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center}
+  .tc .t{font-size:34px;font-weight:700;direction:ltr}
+  .tc .t small{font-size:15px;color:var(--muted);font-weight:500}
+  .tc .side{color:var(--muted);font-size:13px;font-weight:600}
+  .diff{border-radius:14px;padding:10px 16px;background:var(--idle-soft)}
+  .diff .n{font-size:22px;font-weight:700;direction:ltr}
+  .diff .l{font-size:12px;color:var(--muted)}
+  .diff.ok{background:var(--ok-soft)} .diff.ok .n{color:var(--ok)}
+  .diff.bad{background:var(--bad-soft)} .diff.bad .n{color:var(--bad)}
+  .meter{margin-top:16px}
+  .meter .track{position:relative;height:10px;border-radius:99px;background:var(--line);overflow:visible}
+  .meter .fill{position:absolute;inset:0 0 0 auto;height:10px;border-radius:99px;background:var(--ok);width:0;transition:width .5s}
+  .meter .mark{position:absolute;top:-6px;width:2px;height:22px;background:var(--ink);opacity:.55}
+  .meter .marklbl{position:absolute;top:18px;font-size:11px;color:var(--muted);transform:translateX(50%);white-space:nowrap}
+  .meter .scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:22px}
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+
+  /* foot card */
+  .foot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .badge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;background:var(--idle-soft);color:var(--idle)}
+  .badge.NORMAL{background:var(--ok-soft);color:var(--ok)}
+  .badge.WARNING{background:var(--warn-soft);color:var(--warn)}
+  .badge.DANGER{background:var(--bad-soft);color:var(--bad)}
+  .foot-body{display:grid;grid-template-columns:180px 1fr;gap:18px;align-items:start}
+  @media (max-width:520px){.foot-body{grid-template-columns:1fr}}
+  .foot-svg{width:100%;max-width:180px;margin:0 auto;display:block}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:11px;color:var(--muted);margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .lg-c{width:10px;height:10px;border-radius:50%;border:2px solid var(--brand)}
+  .lg-d{width:9px;height:9px;transform:rotate(45deg);background:#7a8b97}
+  .rows{display:flex;flex-direction:column;gap:12px}
+  .sec-t{font-size:12px;font-weight:700;color:var(--muted);margin:0 0 6px}
+  .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kv div{background:var(--bg);border-radius:10px;padding:8px 10px}
+  .kv b{display:block;font-size:17px;direction:ltr;text-align:start}
+  .kv span{font-size:11px;color:var(--muted)}
+  .bar{position:relative;height:10px;border-radius:99px;background:var(--line);margin-top:6px}
+  .bar .f{position:absolute;inset:0 0 0 auto;border-radius:99px;background:var(--brand);width:0;transition:width .5s}
+  .bar .m{position:absolute;top:-4px;width:2px;height:18px;background:var(--ink);opacity:.5}
+  .bar-l{position:relative;height:16px;font-size:11px;color:var(--muted);margin-top:6px}
+  .bar-l span{position:absolute;top:0;transform:translateX(50%)}
+  [dir=ltr] .bar-l span{transform:translateX(-50%)}
+  [dir=ltr] .bar .f{inset:0 auto 0 0} [dir=ltr] .meter .fill{inset:0 auto 0 0}
+  .flexrow{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px}
+  .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--ok-soft);color:var(--ok)}
+  .tag.ALERT,.tag.MEDIUM,.tag.HIGHHUM{background:var(--warn-soft);color:var(--warn)}
+  .tag.DANGER,.tag.HIGH{background:var(--bad-soft);color:var(--bad)}
+  .tag.NA{background:var(--idle-soft);color:var(--idle)}
+  .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mini div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .mini b{display:block;font-size:15px;direction:ltr;text-align:start}
+  .mini span{font-size:11px;color:var(--muted)}
+
+  /* bottom */
+  .grid-bottom{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+  @media (max-width:900px){.grid-bottom{grid-template-columns:1fr}}
+  .log{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+  .log li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .log li:last-child{border-bottom:0}
+  .log time{color:var(--muted);font-size:12px;min-width:62px;direction:ltr;text-align:right}
+  .log .empty{color:var(--muted)}
+  .rules{margin:0;padding:0;list-style:none;font-size:13px}
+  .rules li{padding:8px 0;border-bottom:1px solid var(--line)}
+  .rules li:last-child{border-bottom:0}
+  .rules b{color:var(--brand)}
+  .vib{display:inline-flex;gap:3px;vertical-align:middle;margin-inline-start:6px}
+  .vib i{display:inline-block;height:8px;border-radius:3px;background:var(--brand)}
+  footer{margin-top:22px;padding:14px 18px;border-radius:14px;background:var(--brand-soft);color:#0a4f57;font-size:13px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21c-2.2 0-3.5-1.6-3.5-4 0-3 2-4.5 2-8.5C6.5 5 8 3 10 3s3 1.8 3 4.2c0 3.3-1.5 4.3-1.5 7.3 0 2 1 2.5 1 4C12.5 20 10.5 21 8 21z"/><path d="M16 5.5v.01M18.5 7.5v.01M19.5 10.5v.01"/></svg>
+      </div>
+      <div>
+        <h1>NeuroSense</h1>
+        <p data-t="subtitle">لوحة متابعة القدمين · نموذج بحثي</p>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span id="conn" class="pill"><span class="dot"></span><span id="connTxt">جارٍ الاتصال…</span></span>
+      <span class="pill" style="font-weight:500"><span data-t="updated">آخر تحديث</span>&nbsp;<b id="updated" style="direction:ltr">--:--:--</b></span>
+      <button class="btn" id="langBtn">English</button>
+    </div>
+  </header>
+
+  <!-- overall status + temperature -->
+  <section class="grid-top">
+    <div class="card">
+      <h2 data-t="overallT">الحالة العامة</h2>
+      <p class="sub" data-t="overallS">حالة كل قدم وسبب التنبيه</p>
+      <div class="overall">
+        <div class="ov-box st-OFFLINE" id="ovR">
+          <div class="lbl" data-t="rightFoot">القدم اليمنى</div>
+          <div class="val" id="ovRval">—</div>
+          <div class="why" id="ovRwhy"></div>
+        </div>
+        <div class="ov-box st-OFFLINE" id="ovL">
+          <div class="lbl" data-t="leftFoot">القدم اليسرى</div>
+          <div class="val" id="ovLval">—</div>
+          <div class="why" id="ovLwhy"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-t="tempT">مقارنة حرارة القدمين</h2>
+      <p class="sub" data-t="tempS">فرق أكثر من 2.2°م بين القدمين علامة خطر (IWGDF 2023)</p>
+      <div class="tc">
+        <div><div class="side" data-t="right">اليمنى</div><div class="t" id="tR">--<small>°م</small></div></div>
+        <div class="diff" id="diffBox"><div class="n" id="tD">--</div><div class="l" data-t="diff">الفرق</div></div>
+        <div><div class="side" data-t="left">اليسرى</div><div class="t" id="tL">--<small>°م</small></div></div>
+      </div>
+      <div class="meter">
+        <div class="track"><div class="fill" id="tFill"></div><div class="mark" id="tMark" style="right:44%"></div><div class="marklbl" id="tMarkL" style="right:44%">2.2°</div></div>
+        <div class="scale"><span>0°</span><span>5°+</span></div>
+      </div>
+      <div class="note" id="tNote"></div>
+    </div>
+  </section>
+
+  <!-- two feet: right foot on the right in Arabic layout -->
+  <section class="grid-feet" id="feet"></section>
+
+  <section class="grid-bottom">
+    <div class="card">
+      <h2 data-t="logT">سجل التنبيهات</h2>
+      <p class="sub" data-t="logS">كل تغيّر في حالة أي قدم</p>
+      <ul class="log" id="log"><li class="empty" data-t="logEmpty">لا توجد تنبيهات حتى الآن</li></ul>
+    </div>
+    <div class="card">
+      <h2 data-t="rulesT">قواعد التنبيه وأنماط الاهتزاز</h2>
+      <p class="sub" data-t="rulesS">الاهتزاز في عضلة الساق (في المحاكاة: لمبة صفراء)</p>
+      <ul class="rules" id="rules"></ul>
+    </div>
+  </section>
+
+  <footer data-t="disclaimer">
+    NeuroSense نموذج بحثي في مرحلة المحاكاة، وليس جهازًا طبيًا معتمدًا. البيانات من محاكاة Wokwi، وحدود التنبيه للعمل البحثي ولم تُختبر سريريًا.
+  </footer>
+</div>
+
+<script>
+// ------------------------------------------------------------------
+// SETTINGS
+// ------------------------------------------------------------------
+const DB_URL = "https://neurosense-ca40a-default-rtdb.firebaseio.com/feet.json";
+const REFRESH_MS = 3000;
+const STALE_MS = 15000;           // no new upload for 15 s -> foot is offline
+const TEMP_LIMIT = 2.2;
+const FORCE_DEMO = new URLSearchParams(location.search).has("demo");
+
+// ------------------------------------------------------------------
+// TEXT (Arabic / English)
+// ------------------------------------------------------------------
+const T = {
+  ar:{subtitle:"لوحة متابعة القدمين · نموذج بحثي",updated:"آخر تحديث",overallT:"الحالة العامة",overallS:"حالة كل قدم وسبب التنبيه",
+      rightFoot:"القدم اليمنى",leftFoot:"القدم اليسرى",tempT:"مقارنة حرارة القدمين",tempS:"فرق أكثر من 2.2°م بين القدمين علامة خطر (IWGDF 2023)",
+      right:"اليمنى",left:"اليسرى",diff:"الفرق",logT:"سجل التنبيهات",logS:"كل تغيّر في حالة أي قدم",logEmpty:"لا توجد تنبيهات حتى الآن",
+      rulesT:"قواعد التنبيه وأنماط الاهتزاز",rulesS:"الاهتزاز في عضلة الساق (في المحاكاة: لمبة صفراء)",
+      disclaimer:"NeuroSense نموذج بحثي في مرحلة المحاكاة، وليس جهازًا طبيًا معتمدًا. البيانات من محاكاة Wokwi، وحدود التنبيه للعمل البحثي ولم تُختبر سريريًا.",
+      live:"متصل بـ Firebase",demo:"بيانات تجريبية (محاكاة)",off:"غير متصل",connecting:"جارٍ الاتصال…",
+      NORMAL:"طبيعي",WARNING:"انتبه",DANGER:"خطر",OFFLINE:"غير متصلة",
+      mainP:"حساسات الضغط الأساسية (kPa)",heel:"الكعب",fore1:"المقدمة الداخلية",fore2:"المقدمة الخارجية",
+      sustained:"الضغط المستمر: نسبة الوقت فوق 4.7 kPa",windowWait:"يجمع القراءات… (يحكم بعد اكتمال النافذة)",
+      flex:"طبقة الضغط المرنة (6 نقاط)",flexPoint:"أعلى نقطة",other:"أخرى",
+      temp:"الحرارة",hum:"الرطوبة",bat:"البطارية",motion:"الحركة",moving:"يتحرك",still:"ثابت",
+      lgMain:"حساس أساسي",lgFlex:"نقطة الطبقة المرنة",
+      rP:"ضغط مستمر",rF:"نقطة ضغط موضعية",rT:"فرق حرارة",rH:"رطوبة عالية (تجريبي)",
+      whyNone:"لا يوجد تنبيه",whyOff:"لم تصل بيانات من هذه القدم خلال 15 ثانية",
+      wP_MEDIUM:"ضغط مستمر متوسط",wP_HIGH:"ضغط مستمر عالي",wF_ALERT:"نقطة ضغط موضعية",wF_DANGER:"نقطة ضغط موضعية عالية",wT:"فرق حرارة بين القدمين",wH:"رطوبة عالية",
+      tNoteOk:"الفرق ضمن الطبيعي",tNoteBad:"الفرق أعلى من 2.2°م",tNoteNA:"تحتاج القدمين متصلتين للمقارنة",
+      logChanged:"تغيّرت الحالة إلى",
+      L_OK:"طبيعي",L_MEDIUM:"متوسط",L_HIGH:"عالي",L_ALERT:"تنبيه",L_DANGER:"خطر",
+      "In-Heel":"داخل الكعب","Out-Heel":"خارج الكعب","In-Mid":"داخل المنتصف","Out-Mid":"خارج المنتصف","In-Fore":"داخل المقدمة","Out-Fore":"خارج المقدمة",
+      ruleP:"<b>ضغط مستمر</b>: فوق 4.7 kPa (35 mmHg) في 35% من الوقت = متوسط، وفي 95% = عالي. المصدر: Najafi 2017. النافذة 15 دقيقة (دقيقة في وضع العرض).",
+      ruleF:"<b>نقطة ضغط موضعية</b>: نقطة أعلى بوضوح من باقي الطبقة لمدة 4 ثوانٍ = تنبيه، و8 ثوانٍ = خطر. قيم بحثية للمحاكاة.",
+      ruleT:"<b>فرق حرارة</b>: أكثر من 2.2°م بين القدمين في 3 قراءات متتالية. IWGDF تؤكد على يومين متتاليين.",
+      ruleH:"<b>رطوبة</b>: فوق 60% = انتبه فقط. تجريبي، ما له رقم طبي معتمد."},
+  en:{subtitle:"Two-foot monitoring dashboard · research prototype",updated:"Last update",overallT:"Overall status",overallS:"Status of each foot and the reason",
+      rightFoot:"Right foot",leftFoot:"Left foot",tempT:"Temperature comparison",tempS:"A difference above 2.2 °C between feet is a warning sign (IWGDF 2023)",
+      right:"Right",left:"Left",diff:"Difference",logT:"Alert log",logS:"Every status change of either foot",logEmpty:"No alerts yet",
+      rulesT:"Alert rules and vibration patterns",rulesS:"Vibration on the calf muscle (yellow LED in the simulation)",
+      disclaimer:"NeuroSense is a research prototype in simulation, not an approved medical device. Data come from a Wokwi simulation; alert thresholds are research working values and are not clinically validated.",
+      live:"Connected to Firebase",demo:"Demo data (simulated)",off:"Offline",connecting:"Connecting…",
+      NORMAL:"Normal",WARNING:"Warning",DANGER:"Danger",OFFLINE:"Offline",
+      mainP:"Main pressure sensors (kPa)",heel:"Heel",fore1:"Inner forefoot",fore2:"Outer forefoot",
+      sustained:"Sustained pressure: share of time above 4.7 kPa",windowWait:"Collecting readings… (decides when the window is full)",
+      flex:"Flexible pressure layer (6 points)",flexPoint:"Highest point",other:"Other",
+      temp:"Temperature",hum:"Humidity",bat:"Battery",motion:"Motion",moving:"Moving",still:"Still",
+      lgMain:"Main sensor",lgFlex:"Flexible layer point",
+      rP:"Sustained pressure",rF:"Localized pressure point",rT:"Temperature difference",rH:"High humidity (experimental)",
+      whyNone:"No alerts",whyOff:"No data from this foot in the last 15 s",
+      wP_MEDIUM:"Medium sustained pressure",wP_HIGH:"High sustained pressure",wF_ALERT:"Localized pressure point",wF_DANGER:"High localized pressure point",wT:"Temperature difference between feet",wH:"High humidity",
+      tNoteOk:"Difference within normal",tNoteBad:"Difference above 2.2 °C",tNoteNA:"Both feet must be online to compare",
+      logChanged:"status changed to",
+      L_OK:"OK",L_MEDIUM:"Medium",L_HIGH:"High",L_ALERT:"Alert",L_DANGER:"Danger",
+      "In-Heel":"Inner heel","Out-Heel":"Outer heel","In-Mid":"Inner midfoot","Out-Mid":"Outer midfoot","In-Fore":"Inner forefoot","Out-Fore":"Outer forefoot",
+      ruleP:"<b>Sustained pressure</b>: above 4.7 kPa (35 mmHg) for 35% of the time = medium, 95% = high. Source: Najafi 2017. Window 15 min (1 min in demo mode).",
+      ruleF:"<b>Localized pressure point</b>: one point clearly higher than the rest of the layer for 4 s = alert, 8 s = danger. Research simulation values.",
+      ruleT:"<b>Temperature difference</b>: more than 2.2 °C between the feet on 3 consecutive readings. IWGDF confirms over two consecutive days.",
+      ruleH:"<b>Humidity</b>: above 60% = warning only. Experimental, no medical threshold."}
+};
+let lang = "ar";
+const t = k => (T[lang][k] ?? k);
+
+// ------------------------------------------------------------------
+// FOOT DRAWING (top view; medial = big-toe side)
+// ------------------------------------------------------------------
+const FLEX_NAMES = ["In-Heel","Out-Heel","In-Mid","Out-Mid","In-Fore","Out-Fore"];
+// coordinates for a RIGHT foot (big toe on the left of the drawing); left foot is mirrored
+const MAIN_POS = [[100,392],[66,150],[140,170]];                    // heel, inner fore, outer fore
+const FLEX_POS = [[80,350],[122,350],[74,268],[128,268],[82,196],[134,212]];
+
+function footSVG(side){
+  const mirror = side === "LEFT" ? 'transform="translate(200,0) scale(-1,1)"' : '';
+  const main = MAIN_POS.map((p,i)=>`<circle id="${side}-m${i}" cx="${p[0]}" cy="${p[1]}" r="17" fill="#e3f3f4" stroke="#0b6e79" stroke-width="2.5"/>`).join("");
+  const flex = FLEX_POS.map((p,i)=>`<rect id="${side}-f${i}" x="${p[0]-6}" y="${p[1]-6}" width="12" height="12" rx="2" transform="rotate(45 ${p[0]} ${p[1]})" fill="#c3ccd3"/>`).join("");
+  return `<svg class="foot-svg" viewBox="0 0 200 440" role="img" aria-label="${side} foot sensor map">
+    <g ${mirror}>
+      <path d="M58 118 C40 160 38 210 46 260 C52 300 56 330 58 360 C60 410 78 430 102 430 C130 430 146 408 146 370
+               C146 330 150 300 158 262 C168 214 172 178 168 140 C164 112 150 96 128 94 C104 92 74 96 58 118 Z"
+            fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      <ellipse cx="66" cy="78" rx="19" ry="24" fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      <ellipse cx="101" cy="68" rx="11" ry="14" fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      <ellipse cx="124" cy="72" rx="10" ry="12" fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      <ellipse cx="144" cy="82" rx="9" ry="11" fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      <ellipse cx="160" cy="96" rx="8" ry="9" fill="#f7fafc" stroke="#b8c6d0" stroke-width="2.5"/>
+      ${flex}${main}
+    </g>
+  </svg>`;
+}
+
+function footCard(side){
+  const edge = lang === "ar" ? "right" : "left";
+  const name = side === "RIGHT" ? t("rightFoot") : t("leftFoot");
+  return `<div class="card" id="card-${side}">
+    <div class="foot-head"><h2>${name}</h2><span class="badge" id="${side}-badge">${t("OFFLINE")}</span></div>
+    <div class="foot-body">
+      <div>${footSVG(side)}
+        <div class="legend"><span><i class="lg-c"></i>${t("lgMain")}</span><span><i class="lg-d"></i>${t("lgFlex")}</span></div>
+      </div>
+      <div class="rows">
+        <div>
+          <p class="sec-t">${t("mainP")}</p>
+          <div class="kv">
+            <div><b id="${side}-p0">--</b><span>${t("heel")}</span></div>
+            <div><b id="${side}-p1">--</b><span>${t("fore1")}</span></div>
+            <div><b id="${side}-p2">--</b><span>${t("fore2")}</span></div>
+          </div>
+        </div>
+        <div>
+          <p class="sec-t">${t("sustained")}</p>
+          <div class="flexrow"><span id="${side}-pct">--%</span><span class="tag NA" id="${side}-plev">--</span></div>
+          <div class="bar"><div class="f" id="${side}-pbar"></div><div class="m" style="${edge}:35%"></div><div class="m" style="${edge}:95%"></div></div>
+          <div class="bar-l"><span style="${edge}:0%">0%</span><span style="${edge}:35%">35%</span><span style="${edge}:95%">95%</span></div>
+          <div class="note" id="${side}-pwait" hidden>${t("windowWait")}</div>
+        </div>
+        <div>
+          <p class="sec-t">${t("flex")}</p>
+          <div class="flexrow"><span>${t("flexPoint")}: <b id="${side}-fpt">--</b></span><span class="tag NA" id="${side}-flev">--</span></div>
+        </div>
+        <div class="mini">
+          <div><b id="${side}-temp">--</b><span>${t("temp")}</span></div>
+          <div><b id="${side}-hum">--</b><span>${t("hum")}</span></div>
+          <div><b id="${side}-bat">--</b><span>${t("bat")} · <span id="${side}-mov">--</span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function vib(pattern){ return `<span class="vib">${pattern.map(w=>`<i style="width:${w}px"></i>`).join("")}</span>`; }
+
+function renderStatic(){
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = t(el.dataset.t));
+  document.getElementById("langBtn").textContent = lang === "ar" ? "English" : "العربية";
+  ["tMark","tMarkL"].forEach(id => { const el = document.getElementById(id); el.style.right = el.style.left = ""; el.style[lang === "ar" ? "right" : "left"] = "44%"; });
+  document.querySelector(".meter .marklbl").style.transform = lang === "ar" ? "translateX(50%)" : "translateX(-50%)";
+  // RTL: first child is on the right -> RIGHT first. LTR: put LEFT first so right foot sits on the right.
+  const order = lang === "ar" ? ["RIGHT","LEFT"] : ["LEFT","RIGHT"];
+  document.getElementById("feet").innerHTML = order.map(footCard).join("");
+  document.getElementById("rules").innerHTML =
+    `<li>${t("ruleP")} ${vib([22,22])}</li><li>${t("ruleF")} ${vib([6,6])}</li><li>${t("ruleT")} ${vib([5,5,5])}</li><li>${t("ruleH")} ${vib([5])}</li>`;
+  renderLog();
+  if (lastData) render(lastData);
+}
+
+// ------------------------------------------------------------------
+// STATE
+// ------------------------------------------------------------------
+const seen = {RIGHT:{seq:null, at:0}, LEFT:{seq:null, at:0}};
+const prevStatus = {RIGHT:null, LEFT:null};
+const logItems = [];
+let lastData = null;
+let mode = "connecting";
+
+function online(side, d){
+  if (!d) return false;
+  const s = seen[side];
+  if (s.seq === null){ s.seq = d.seq; s.at = 0; return false; }   // first sight: wait for a new upload
+  if (d.seq !== s.seq){ s.seq = d.seq; s.at = Date.now(); }
+  return Date.now() - s.at < STALE_MS;
+}
+
+const num = (v, digits=1) => (v === null || v === undefined || isNaN(v)) ? null : Number(v).toFixed(digits);
+
+function pressureColor(kpa){
+  if (kpa === null) return "#e3f3f4";
+  if (kpa <= 4.7) return "#e5f6ee";
+  if (kpa < 50) return "#ffe7b3";
+  if (kpa < 100) return "#ffb877";
+  return "#f17a7a";
+}
+
+function reasonKeys(d){
+  const r = [];
+  if (d.pressure_level === "MEDIUM" || d.pressure_level === "HIGH") r.push("wP_"+d.pressure_level);
+  if (d.flex_pressure_level === "ALERT" || d.flex_pressure_level === "DANGER") r.push("wF_"+d.flex_pressure_level);
+  if (d.temp_alert) r.push("wT");
+  if (d.humidity_alert) r.push("wH");
+  return r;
+}
+const reasons = d => reasonKeys(d).map(t);
+
+// ------------------------------------------------------------------
+// RENDER
+// ------------------------------------------------------------------
+function renderFoot(side, d, isOn){
+  const $ = id => document.getElementById(`${side}-${id}`);
+  const status = isOn ? (d.status || "NORMAL") : "OFFLINE";
+  const badge = $("badge"); badge.className = "badge " + status; badge.textContent = t(status);
+  document.getElementById("card-"+side).style.opacity = isOn ? 1 : .6;
+
+  const ov = document.getElementById(side === "RIGHT" ? "ovR" : "ovL");
+  ov.className = "ov-box st-" + status;
+  ov.querySelector(".val").textContent = t(status);
+  ov.querySelector(".why").textContent = !isOn ? t("whyOff") : (reasons(d).join(" · ") || t("whyNone"));
+
+  if (!d) return;
+  const p = [d.p_heel, d.p_fore1, d.p_fore2];
+  p.forEach((v,i)=>{
+    $("p"+i).textContent = num(v) ?? "--";
+    $("m"+i).setAttribute("fill", pressureColor(v));
+  });
+
+  const pct = d.p_above_pct ?? 0;
+  $("pct").textContent = Math.round(pct) + "%";
+  $("pbar").style.width = Math.min(100, pct) + "%";
+  $("pbar").style.background = d.pressure_level === "HIGH" ? "var(--bad)" : d.pressure_level === "MEDIUM" ? "var(--warn)" : "var(--brand)";
+  const plev = d.p_window_ready ? (d.pressure_level || "OK") : "NA";
+  $("plev").className = "tag " + plev; $("plev").textContent = plev === "NA" ? "…" : t("L_"+plev);
+  $("pwait").hidden = !!d.p_window_ready;
+
+  const flex = Array.isArray(d.flex_pressure) ? d.flex_pressure : [];
+  const hot = FLEX_NAMES.indexOf(d.flex_pressure_point);
+  flex.forEach((v,i)=>{
+    let c = "#c3ccd3";
+    if (v >= 1500) c = "#ffb877";
+    if (i === hot && d.flex_pressure_level === "ALERT") c = "#d98a00";
+    if (i === hot && d.flex_pressure_level === "DANGER") c = "#d23a3a";
+    $("f"+i).setAttribute("fill", c);
+  });
+  $("fpt").textContent = (d.flex_pressure_level && d.flex_pressure_level !== "OK") ? t(d.flex_pressure_point || "-") : "-";
+  $("flev").className = "tag " + (d.flex_pressure_level || "NA"); $("flev").textContent = d.flex_pressure_level ? t("L_"+d.flex_pressure_level) : "--";
+
+  $("temp").textContent = num(d.temp_c) !== null ? num(d.temp_c) + "°" : "--";
+  $("hum").textContent = num(d.humidity,0) !== null ? num(d.humidity,0) + "%" : "--";
+  $("bat").textContent = (d.battery ?? "--") + "%";
+  $("mov").textContent = d.moving ? t("moving") : t("still");
+}
+
+function renderTemps(R, L, rOn, lOn){
+  const tr = rOn ? num(R?.temp_c) : null, tl = lOn ? num(L?.temp_c) : null;
+  document.getElementById("tR").innerHTML = (tr ?? "--") + "<small>°" + (lang==="ar"?"م":"C") + "</small>";
+  document.getElementById("tL").innerHTML = (tl ?? "--") + "<small>°" + (lang==="ar"?"م":"C") + "</small>";
+  const box = document.getElementById("diffBox"), fill = document.getElementById("tFill"), note = document.getElementById("tNote");
+  if (tr !== null && tl !== null){
+    const diff = Math.abs(tr - tl);
+    const bad = diff > TEMP_LIMIT;
+    document.getElementById("tD").textContent = diff.toFixed(1) + "°";
+    box.className = "diff " + (bad ? "bad" : "ok");
+    fill.style.width = Math.min(100, diff / 5 * 100) + "%";
+    fill.style.background = bad ? "var(--bad)" : "var(--ok)";
+    const confirmed = (R?.temp_alert || L?.temp_alert);
+    note.textContent = bad ? t("tNoteBad") + (confirmed ? " ✓" : "") : t("tNoteOk");
+  } else {
+    document.getElementById("tD").textContent = "--";
+    box.className = "diff"; fill.style.width = "0"; note.textContent = t("tNoteNA");
+  }
+}
+
+function addLog(side, status, d){
+  const time = new Date().toLocaleTimeString("en-GB");
+  logItems.unshift({time, side, status, why: d ? reasonKeys(d) : []});
+  if (logItems.length > 40) logItems.pop();
+  renderLog();
+}
+
+function renderLog(){
+  const ul = document.getElementById("log");
+  if (!logItems.length){ ul.innerHTML = `<li class="empty">${t("logEmpty")}</li>`; return; }
+  ul.innerHTML = logItems.map(it => {
+    const foot = it.side === "RIGHT" ? t("rightFoot") : t("leftFoot");
+    return `<li><time>${it.time}</time><span class="tag ${it.status === "NORMAL" ? "" : it.status === "WARNING" ? "ALERT" : it.status === "DANGER" ? "DANGER" : "NA"}">${t(it.status)}</span>
+            <span>${foot} ${t("logChanged")} <b>${t(it.status)}</b>${it.why.length ? " — " + it.why.map(t).join(lang === "ar" ? "، " : ", ") : ""}</span></li>`;
+  }).join("");
+}
+
+function render(data){
+  lastData = data;
+  const R = data?.RIGHT, L = data?.LEFT;
+  const rOn = online("RIGHT", R), lOn = online("LEFT", L);
+  renderFoot("RIGHT", R, rOn);
+  renderFoot("LEFT", L, lOn);
+  renderTemps(R, L, rOn, lOn);
+  [["RIGHT",R,rOn],["LEFT",L,lOn]].forEach(([side,d,on])=>{
+    const st = on ? (d.status || "NORMAL") : "OFFLINE";
+    if (prevStatus[side] !== null && prevStatus[side] !== st) addLog(side, st, on ? d : null);
+    prevStatus[side] = st;
+  });
+  document.getElementById("updated").textContent = new Date().toLocaleTimeString("en-GB");
+}
+
+function setMode(m){
+  mode = m;
+  const pill = document.getElementById("conn");
+  pill.className = "pill " + (m === "live" ? "live" : m === "demo" ? "demo" : m === "off" ? "off" : "");
+  document.getElementById("connTxt").textContent = t(m === "connecting" ? "connecting" : m);
+}
+
+// ------------------------------------------------------------------
+// DEMO DATA (used only if Firebase cannot be reached, or with ?demo)
+// ------------------------------------------------------------------
+let demoTick = 0;
+function demoData(){
+  demoTick++;
+  const k = demoTick % 40;
+  const mk = (side, base) => {
+    const pressing = side === "RIGHT" && k > 8;
+    const pct = pressing ? Math.min(100, (k - 8) * 4) : 10;
+    const lvl = pct >= 95 ? "HIGH" : pct >= 35 ? "MEDIUM" : "OK";
+    const flexHot = side === "LEFT" && k > 20 && k < 34;
+    const flexLvl = flexHot ? (k > 26 ? "DANGER" : "ALERT") : "OK";
+    const temp = side === "RIGHT" ? 30.2 : (k > 14 ? 33.1 : 30.6);
+    const tempAlert = k > 18;
+    const st = (lvl === "HIGH" || flexLvl === "DANGER") ? "DANGER" : (lvl !== "OK" || flexLvl !== "OK" || tempAlert) ? "WARNING" : "NORMAL";
+    return {foot:side, seq:demoTick, status:st, battery: side === "RIGHT" ? 82 : 76,
+      p_heel: pressing ? 61.5 : 2.1, p_fore1: pressing ? 24.0 : 1.4, p_fore2: 3.0 + base,
+      p_above_pct: pct, p_window_ready: demoTick > 4, pressure_level: demoTick > 4 ? lvl : "OK",
+      flex_pressure: flexHot ? [210,180,320,260,3300,240] : [150,120,90,110,160,140],
+      flex_pressure_point: flexHot ? "In-Fore" : "In-Fore", flex_pressure_level: flexLvl,
+      temp_c: temp, temp_other: null, temp_diff: 0, temp_alert: tempAlert,
+      humidity: 48 + base, humidity_alert: false, moving: k % 6 < 3, demo_mode: true};
+  };
+  return {RIGHT: mk("RIGHT", 0), LEFT: mk("LEFT", 1)};
+}
+
+// ------------------------------------------------------------------
+// LOOP
+// ------------------------------------------------------------------
+async function tick(){
+  if (FORCE_DEMO){ setMode("demo"); render(demoData()); return; }
+  try {
+    const res = await fetch(DB_URL, {cache:"no-store"});
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    setMode("live");
+    render(data || {});
+  } catch(e){
+    setMode("demo");
+    render(demoData());
+  }
+}
+
+document.getElementById("langBtn").addEventListener("click", () => {
+  lang = lang === "ar" ? "en" : "ar";
+  renderStatic(); setMode(mode);
+});
+
+renderStatic();
+tick();
+setInterval(tick, REFRESH_MS);
+</script>
+</body>
+</html>
