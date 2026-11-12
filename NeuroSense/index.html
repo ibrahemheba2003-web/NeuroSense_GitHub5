@@ -75,6 +75,7 @@
 
   /* foot card */
   .foot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .age{font-size:12px;color:var(--muted);margin-top:2px}
   .badge{font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;background:var(--idle-soft);color:var(--idle)}
   .badge.NORMAL{background:var(--ok-soft);color:var(--ok)}
   .badge.WARNING{background:var(--warn-soft);color:var(--warn)}
@@ -209,7 +210,7 @@
 // ------------------------------------------------------------------
 const DB_URL = "https://neurosense-ca40a-default-rtdb.firebaseio.com/feet.json";
 const REFRESH_MS = 3000;
-const STALE_MS = 60000;           // no new upload for 60 s -> foot is offline
+const STALE_MS = 180000;          // no new upload for 3 min -> foot is offline (Wokwi runs slower than real time)
 const TEMP_LIMIT = 2.2;
 const FORCE_DEMO = new URLSearchParams(location.search).has("demo");
 
@@ -230,10 +231,10 @@ const T = {
       temp:"الحرارة",hum:"الرطوبة",bat:"البطارية",motion:"الحركة",moving:"يتحرك",still:"ثابت",
       lgMain:"حساس أساسي",lgFlex:"نقطة الطبقة المرنة",
       rP:"ضغط مستمر",rF:"نقطة ضغط موضعية",rT:"فرق حرارة",rH:"رطوبة عالية (تجريبي)",
-      whyNone:"لا يوجد تنبيه",whyOff:"لم تصل بيانات من هذه القدم خلال دقيقة",
+      whyNone:"لا يوجد تنبيه",whyOff:"لم تصل بيانات جديدة من هذه القدم خلال 3 دقائق",
       wP_MEDIUM:"ضغط مستمر متوسط",wP_HIGH:"ضغط مستمر عالي",wF_ALERT:"نقطة ضغط موضعية",wF_DANGER:"نقطة ضغط موضعية عالية",wT:"فرق حرارة بين القدمين",wH:"رطوبة عالية",
       tNoteOk:"الفرق ضمن الطبيعي",tNoteBad:"الفرق أعلى من 2.2°م",tNoteNA:"تحتاج القدمين متصلتين للمقارنة",
-      logChanged:"تغيّرت الحالة إلى",
+      logChanged:"تغيّرت الحالة إلى",ageA:"آخر قراءة جديدة قبل",ageS:"ثانية",
       L_OK:"طبيعي",L_MEDIUM:"متوسط",L_HIGH:"عالي",L_ALERT:"تنبيه",L_DANGER:"خطر",
       "In-Heel":"داخل الكعب","Out-Heel":"خارج الكعب","In-Mid":"داخل المنتصف","Out-Mid":"خارج المنتصف","In-Fore":"داخل المقدمة","Out-Fore":"خارج المقدمة",
       ruleP:"<b>ضغط مستمر</b>: فوق 4.7 kPa (35 mmHg) في 35% من الوقت = متوسط، وفي 95% = عالي. المصدر: Najafi 2017. النافذة 15 دقيقة (دقيقة في وضع العرض).",
@@ -253,10 +254,10 @@ const T = {
       temp:"Temperature",hum:"Humidity",bat:"Battery",motion:"Motion",moving:"Moving",still:"Still",
       lgMain:"Main sensor",lgFlex:"Flexible layer point",
       rP:"Sustained pressure",rF:"Localized pressure point",rT:"Temperature difference",rH:"High humidity (experimental)",
-      whyNone:"No alerts",whyOff:"No data from this foot in the last minute",
+      whyNone:"No alerts",whyOff:"No new data from this foot in the last 3 minutes",
       wP_MEDIUM:"Medium sustained pressure",wP_HIGH:"High sustained pressure",wF_ALERT:"Localized pressure point",wF_DANGER:"High localized pressure point",wT:"Temperature difference between feet",wH:"High humidity",
       tNoteOk:"Difference within normal",tNoteBad:"Difference above 2.2 °C",tNoteNA:"Both feet must be online to compare",
-      logChanged:"status changed to",
+      logChanged:"status changed to",ageA:"Last new reading",ageS:"s ago",
       L_OK:"OK",L_MEDIUM:"Medium",L_HIGH:"High",L_ALERT:"Alert",L_DANGER:"Danger",
       "In-Heel":"Inner heel","Out-Heel":"Outer heel","In-Mid":"Inner midfoot","Out-Mid":"Outer midfoot","In-Fore":"Inner forefoot","Out-Fore":"Outer forefoot",
       ruleP:"<b>Sustained pressure</b>: above 4.7 kPa (35 mmHg) for 35% of the time = medium, 95% = high. Source: Najafi 2017. Window 15 min (1 min in demo mode).",
@@ -298,7 +299,7 @@ function footCard(side){
   const edge = lang === "ar" ? "right" : "left";
   const name = side === "RIGHT" ? t("rightFoot") : t("leftFoot");
   return `<div class="card" id="card-${side}">
-    <div class="foot-head"><h2>${name}</h2><span class="badge" id="${side}-badge">${t("OFFLINE")}</span></div>
+    <div class="foot-head"><div><h2>${name}</h2><div class="age" id="${side}-age"></div></div><span class="badge" id="${side}-badge">${t("OFFLINE")}</span></div>
     <div class="foot-body">
       <div>${footSVG(side)}
         <div class="legend"><span><i class="lg-c"></i>${t("lgMain")}</span><span><i class="lg-d"></i>${t("lgFlex")}</span></div>
@@ -363,8 +364,7 @@ let mode = "connecting";
 function online(side, d){
   if (!d) return false;
   const s = seen[side];
-  if (s.seq === null){ s.seq = d.seq; s.at = 0; return false; }   // first sight: wait for a new upload
-  if (d.seq !== s.seq){ s.seq = d.seq; s.at = Date.now(); }
+  if (d.seq !== s.seq){ s.seq = d.seq; s.at = Date.now(); }       // new upload (or first sight)
   return Date.now() - s.at < STALE_MS;
 }
 
@@ -394,6 +394,8 @@ const reasons = d => reasonKeys(d).map(t);
 function renderFoot(side, d, isOn){
   const $ = id => document.getElementById(`${side}-${id}`);
   const status = isOn ? (d.status || "NORMAL") : "OFFLINE";
+  const sAt = seen[side].at;
+  $("age").textContent = d && sAt ? `${t("ageA")} ${Math.round((Date.now() - sAt) / 1000)} ${t("ageS")}` : "";
   const badge = $("badge"); badge.className = "badge " + status; badge.textContent = t(status);
   document.getElementById("card-"+side).style.opacity = isOn ? 1 : .6;
 
